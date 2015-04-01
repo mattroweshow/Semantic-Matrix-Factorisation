@@ -5,6 +5,7 @@ import math
 
 class SVDPlusPlus(baseSVD):
     def __init__(self, parameters, training):
+        # print "priming the model"
         # set the learning params
         self.max_epochs = parameters['max_epochs']
         self.epsilon = parameters['epsilon']
@@ -48,12 +49,21 @@ class SVDPlusPlus(baseSVD):
         for userid in training.users:
             self.user_biases[userid] = 0
             self.user_latent_factors[userid] = np.zeros(self.f)
-            self.user_rated_items[userid] = set([review.itemid for review in training.reviews if review.userid is userid])
+        for review in training.reviews:
+            if review.userid in self.user_rated_items:
+                rated_items = self.user_rated_items[review.userid]
+                rated_items.add(review.itemid)
+                self.user_rated_items[review.userid] = rated_items
+            else:
+                rated_items = set()
+                rated_items.add(review.itemid)
+                self.user_rated_items[review.userid] = rated_items
 
         self.epochs = 0
 
     # returns the predicted rating of the review
     def apply(self, review):
+        # print "applying the model"
         predicted_rating = self.mu
 
         # if we have the user and item bias then use them
@@ -65,11 +75,12 @@ class SVDPlusPlus(baseSVD):
             user_latent_factors = self.user_latent_factors[review.userid]
 
             rated_items = self.user_rated_items[review.userid]
-            sum_rated_latent_factors = 1 / (math.sqrt(len(rated_items)) *
-                                           np.sum([factor_vector
-                                                   for rated_item in rated_items
-                                                   for factor_vector in self.rated_item_latent_factors[rated_item]],
-                                                  axis=0))
+            # prime the rated latent factor vectors
+            scalar = 1 / math.sqrt(len(rated_items))
+            sum_rated_latent_factors = np.zeros(self.f)
+            for rated_item in rated_items:
+                sum_rated_latent_factors += self.rated_item_latent_factors[rated_item]
+            sum_rated_latent_factors *= scalar
 
             # compute the dot product between the item latent factor vector and the user latent factor vector
             personal_comp = np.dot(item_latent_factors, (user_latent_factors + sum_rated_latent_factors))
@@ -90,6 +101,8 @@ class SVDPlusPlus(baseSVD):
 
             # determine the predicted rating
             predicted_rating += user_bias
+
+        # print predicted_rating
 
         return predicted_rating
 
@@ -113,10 +126,10 @@ class SVDPlusPlus(baseSVD):
 
             # we now incorporate the rated latent factors within the model
             scalar = 1 / math.sqrt(len(rated_items))
-            sum_rated_latent_factors = scalar * np.sum([factor_vector
-                                                   for rated_item in rated_items
-                                                   for factor_vector in old_rated_item_latent_factors[rated_item]],
-                                                  axis=0)
+            sum_rated_latent_factors = np.zeros(self.f)
+            for rated_item in rated_items:
+                sum_rated_latent_factors += self.rated_item_latent_factors[rated_item]
+            sum_rated_latent_factors *= scalar
             item_latent_factors += self.eta * (error * (old_user_latent_factors + sum_rated_latent_factors)
                                                - self.lambd * old_item_latent_factors)
             user_latent_factors += self.eta * (error * old_item_latent_factors

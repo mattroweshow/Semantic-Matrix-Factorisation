@@ -109,6 +109,7 @@ class SVD(baseSVD):
         # for error in self.errors:
         #     f.write(str(error) + '\n')
         # f.close()
+        # print str(self.errors)
         pass
 
 

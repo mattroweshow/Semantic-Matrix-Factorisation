@@ -27,13 +27,13 @@ for dataset in datasets:
     # use SGD to learn for now
     sgd = SGD()
 
-    svd = SVD(params, splits.train)
-    svd_trained = sgd.train_model(svd, splits.train)
-    rmse = sgd.test_model(svd_trained, splits.test)
-    print "SVD = " + str(rmse)
+    # svd = SVD(params, splits.train)
+    # svd_trained = sgd.train_model(svd, splits.train)
+    # rmse = sgd.test_model(svd_trained, splits.test)
+    # print "SVD = " + str(rmse)
 
     svdplusplus = SVDPlusPlus(params, splits.train)
     svdplusplus_trained = sgd.train_model(svdplusplus, splits.train)
     rmse_svdplusplus = sgd.test_model(svdplusplus_trained, splits.test)
-    print "SVD Plus Plus = " + str(rmse)
+    print "SVD Plus Plus = " + str(rmse_svdplusplus)
 
