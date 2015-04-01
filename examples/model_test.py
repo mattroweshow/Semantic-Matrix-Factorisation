@@ -3,6 +3,7 @@ __author__ = 'rowem'
 from dataset.recsys_dataset_loader import recsys_loader
 from dataset.dataset_splitter import datasetsplitter
 from models.svd import SVD
+from models.svdplusplus import SVDPlusPlus
 from learning.sgd_learner import SGD
 
 # Runs a specific parameter configuration over the given model
@@ -23,11 +24,16 @@ for dataset in datasets:
     splits = splitter.split_datasets(data, 0.9)
     print splits
 
-    # train the model using the training split
-    svd = SVD(params, splits.train)
     # use SGD to learn for now
     sgd = SGD()
+
+    svd = SVD(params, splits.train)
     svd_trained = sgd.train_model(svd, splits.train)
-    # apply to the test split
     rmse = sgd.test_model(svd_trained, splits.test)
-    print str(rmse)
+    print "SVD = " + str(rmse)
+
+    svdplusplus = SVDPlusPlus(params, splits.train)
+    svdplusplus_trained = sgd.train_model(svdplusplus, splits.train)
+    rmse_svdplusplus = sgd.test_model(svdplusplus_trained, splits.test)
+    print "SVD Plus Plus = " + str(rmse)
+
