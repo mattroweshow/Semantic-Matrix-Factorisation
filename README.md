@@ -8,5 +8,5 @@ All models have been set up, tuned, and tested using Movie recommendations datas
 
 These have been converted to .tsv files to enable reading. Contact me if you want the data in that format. The files need to be added to the directory ./data/datasets/amazon/.., etc.
 
-''Semantic Mappings''
+##Semantic Mappings
 The ./data/semantic_mappings directory contains mappings between item IDs (from the respective movie recommendation dataset) and DBPedia URIs.
