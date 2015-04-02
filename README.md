@@ -6,7 +6,11 @@ See the ./examples folder for examples of how to: (i) run an arbitrary model, (i
 
 All models have been set up, tuned, and tested using Movie recommendations datasets: amazon movie recommendations, movielens, and movietweetings.
 
-These have been converted to .tsv files to enable reading. Contact me if you want the data in that format. The files need to be added to the directory ./data/datasets/amazon/.., etc.
+These have been converted to .tsv files to enable reading. Contact me if you want the data in that format.
+The files need to be added to the directory ./data/datasets/amazon/.., etc.
 
 ##Semantic Mappings
-The ./data/semantic_mappings directory contains mappings between item IDs (from the respective movie recommendation dataset) and DBPedia URIs.
+The ./data/semantic_mappings directory contains mappings between item IDs (from the respective movie recommendation dataset) and DBPedia Category URIs.
+Note that this mapping is a many-to-many mapping as a film can appear in multiple categories.
+
+

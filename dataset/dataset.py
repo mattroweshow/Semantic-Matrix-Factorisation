@@ -34,3 +34,14 @@ class Splits:
 
     def __str__(self):
         return "Train: " + str(self.train) + " & Test: " + str(self.test)
+
+class Folds:
+    def __init__(self, folds):
+        self.folds = folds
+
+    def __str__(self):
+        output = "["
+        for fold in self.folds:
+            output += str(len(fold.reviews)) + ", "
+        output += "]"
+        return output

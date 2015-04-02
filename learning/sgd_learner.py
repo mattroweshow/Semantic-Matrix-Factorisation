@@ -4,7 +4,6 @@ from models.svd_base import baseSVD
 from random import shuffle
 from sklearn.metrics import mean_squared_error
 from math import sqrt
-import numpy as np
 
 class SGD:
 
@@ -23,7 +22,7 @@ class SGD:
                 if error is not 0:
                     model.update(review, error)
 
-            print "Learning Epoch done"
+            # print "Learning Epoch done"
             epoch_count += 1
 
             # break if the model has converged

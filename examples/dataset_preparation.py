@@ -1,10 +1,11 @@
-__author__ = 'rowem'
 from dataset.recsys_dataset_loader import recsys_loader
 from dataset.dataset_splitter import datasetsplitter
+import os
 
+working_dir = os.path.dirname(os.path.realpath(__file__))
+path_to_dataset_dir = working_dir + "/../data/datasets/"
+path_to_mappings_dir = working_dir + "/../data/semantic_mappings/"
 
-path_to_mappings_dir = "/home/rowem/Documents/Git/Data/recsys/semantic_mappings/"
-path_to_dataset_dir = "/home/rowem/Documents/Git/Data/recsys/datasets/"
 datasets = {"amazon", "movielens", "movietweetings"}
 # datasets = {"movietweetings"}
 for dataset in datasets:

@@ -61,6 +61,11 @@ class SVDPlusPlus(baseSVD):
 
         self.epochs = 0
 
+    def reset_hyperparameters(self, hypers):
+        self.eta = hypers['eta']
+        self.lambd = hypers['lambda']
+
+
     # returns the predicted rating of the review
     def apply(self, review):
         # print "applying the model"

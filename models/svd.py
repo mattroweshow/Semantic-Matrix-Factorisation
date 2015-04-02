@@ -11,6 +11,7 @@ class SVD(baseSVD):
         # set the hyperparams
         self.eta = parameters['eta']
         self.lambd = parameters['lambda']
+        # Leave this fixed for now
         self.f = parameters['f']
 
         # set the training data
@@ -43,6 +44,10 @@ class SVD(baseSVD):
             self.user_latent_factors[userid] = np.zeros(self.f)
 
         self.epochs = 0
+
+    def reset_hyperparameters(self, hypers):
+        self.eta = hypers['eta']
+        self.lambd = hypers['lambda']
 
     # returns the predicted rating of the review
     def apply(self, review):
