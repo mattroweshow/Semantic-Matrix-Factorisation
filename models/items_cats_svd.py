@@ -44,31 +44,33 @@ class ItemsCatsSVD(baseSVD):
             self.user_latent_factors[userid] = np.zeros(self.f)
 
         # prime the categories' latent factors
-        unique_cats = []
+        self.unique_cats = []
         for item in item_cats:
             cats = item_cats[item]
             for cat in cats:
-                if cat not in unique_cats:
-                    unique_cats.append(cat)
+                if cat not in self.unique_cats:
+                    self.unique_cats.append(cat)
 #        for cat in unique_cats:
 #            self.cats_latent_factors[cat] = np.zeros(self.f)
 
         # create a matrix version of this
-        self.cats_latent_factors_matrix = np.ndarray(shape=(len(unique_cats), self.f), dtype = float)
-        self.prior_cats_latent_factors_matrix = np.ndarray(shape=(len(unique_cats), self.f), dtype = float)
+        self.cats_latent_factors_matrix = np.ndarray(shape=(len(self.unique_cats), self.f), dtype = float)
+        self.prior_cats_latent_factors_matrix = np.ndarray(shape=(len(self.unique_cats), self.f), dtype = float)
 
         # prime the average category rating
         for item in item_cats:
-            item_cat_avg_rating_vector = np.zeros(len(unique_cats))
+            item_cat_avg_rating_vector = np.zeros(len(self.unique_cats))
             cats = item_cats[item]
 
             # get the ratings of this item
-            item_reviews = [review for review in training.reveiews if review.itemid is item]
+            item_reviews = [review for review in training.reviews if review.itemid is item]
 
             # set the average category rating for each vector element
-            avg_rating = sum([review.rating_score for review in item_reviews]) / len(item_reviews)
+            avg_rating = 0
+            if len(item_reviews) is not 0:
+                avg_rating = sum([review.rating_score for review in item_reviews]) / len(item_reviews)
             for cat in cats:
-                item_cat_avg_rating_vector[unique_cats.index(cat)] = avg_rating
+                item_cat_avg_rating_vector[self.unique_cats.index(cat)] = avg_rating
 
         self.epochs = 0
 
@@ -112,6 +114,7 @@ class ItemsCatsSVD(baseSVD):
         return predicted_rating
 
     def update(self, review, error):
+        # print str(error)
 
         if review.itemid in self.item_biases and review.userid in self.user_biases:
             # update the biases
@@ -124,13 +127,18 @@ class ItemsCatsSVD(baseSVD):
             # update the latent factor vectors
             user_latent_factors = self.user_latent_factors[review.userid]
             old_user_latent_factors = user_latent_factors
+            cats_m = self.cats_latent_factors_matrix
+            old_cats_m = cats_m
 
+            # update the user latent factors
+            user_latent_factors += self.eta * (error - self.lambd * old_user_latent_factors)
+            # update the categories' latent factors
+            for cat in self.item_cats[review.itemid]:
+                cats_m[self.unique_cats.index(cat)] += self.eta * (error - self.lambd * old_cats_m[self.unique_cats.index(cat)])
 
-            item_latent_factors += self.eta * (error * old_user_latent_factors - self.lambd * old_item_latent_factors)
-            user_latent_factors += self.eta * (error * old_item_latent_factors - self.lambd * old_user_latent_factors)
-
-            self.item_latent_factors[review.itemid] = item_latent_factors
+            # reset the latent factors
             self.user_latent_factors[review.userid] = user_latent_factors
+            self.cats_latent_factors_matrix = cats_m
 
         # log the error
         self.errors.append(error)
@@ -157,8 +165,8 @@ class ItemsCatsSVD(baseSVD):
         if len(self.prior_item_biases) is 0:
             self.prior_item_biases = self.item_biases
             self.prior_user_biases = self.user_biases
-            self.prior_item_latent_factors = self.item_latent_factors
             self.prior_user_latent_factors = self.user_latent_factors
+            self.prior_cats_latent_factors_matrix = self.cats_latent_factors_matrix
             converged = False
 
         else:
@@ -167,13 +175,6 @@ class ItemsCatsSVD(baseSVD):
                 if abs(self.item_biases[itemid] - self.prior_item_biases[itemid]) > self.epsilon:
                     converged = False
                     break
-
-                latent_factor_vector = self.item_latent_factors[itemid]
-                prior_factor_vector = self.prior_item_latent_factors[itemid]
-                for i in range(0, self.f):
-                    if abs(latent_factor_vector[i] - prior_factor_vector[i]) > self.epsilon:
-                        converged = False
-                        break
 
             # check the user biases and latent factors for convergence
             for userid in self.user_biases:
@@ -187,5 +188,13 @@ class ItemsCatsSVD(baseSVD):
                     if abs(latent_factor_vector[i] - prior_factor_vector[i]) > self.epsilon:
                         converged = False
                         break
+
+            # check that the category factors have converged: compare category wise vectors
+            for row_num in range(0, self.cats_latent_factors_matrix.shape[0], 1):
+                row = self.cats_latent_factors_matrix[row_num, :]
+                old_row = self.prior_cats_latent_factors_matrix[row_num, :]
+                if abs(sum(row + old_row)) > self.epsilon:
+                    converged = False
+                    break
 
         return converged
