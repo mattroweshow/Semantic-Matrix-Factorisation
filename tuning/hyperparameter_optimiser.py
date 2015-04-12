@@ -3,6 +3,7 @@ __author__ = 'rowem'
 from models.svd_base import baseSVD
 from models.svd import SVD
 from models.svdplusplus import SVDPlusPlus
+from models.items_cats_svd import ItemsCatsSVD
 import numpy as np
 from scipy.optimize import minimize
 from learning.sgd_learner import SGD
@@ -12,13 +13,13 @@ import csv
 
 class Tuner:
     # Tunes the hyperparameters of the model using n-fold cross-validation
-    def nfold_cv_hyperparameter_tuner(self, model_id, model_params, hyper_params, folds):
-
+    def nfold_cv_hyperparameter_tuner(self, model_id, model_params, hyper_params, folds, item_categories):
 
         # Set everything as a global param
         self.model_id = model_id
         self.model_params = model_params
         self.folds = folds
+        self.item_categories = item_categories
 
         # Set the initial guess for the hyperparameters
         # convert the hyperparameters to an ndarry format
@@ -26,7 +27,7 @@ class Tuner:
         # Run the minimisation routine
         res = minimize(self.tuning_function, x1,
                method='nelder-mead',
-               options={'xtol': 1e-8, 'disp': True, 'maxiter': 10})
+               options={'xtol': 1e-8, 'disp': True, 'maxiter': 5})
         print str(res)
 
         # write the tuned hyperparameters to the log directory
@@ -102,6 +103,34 @@ class Tuner:
 
                 # prime the model
                 svd = SVDPlusPlus(params, train)
+                svd_trained = sgd.train_model(svd, train)
+                rmse = sgd.test_model(svd_trained, test)
+                rmses.append(rmse)
+            print str(x) + " | RMSE = " + str(np.mean(rmses))
+            return np.mean(rmses)
+
+        # run Item-Cats SVD
+        elif self.model_id is 3:
+            # prime for 10-fold CV
+            rmses = []
+            for i in range(0, len(self.folds.folds)):
+
+                # prepare the test portion
+                test = self.folds.folds[i]
+                # prepare the training portion
+                train_reviews = []
+                train_users = []
+                train_items = []
+                train_folds = self.folds.folds[:i] + self.folds.folds[i:]
+                for fold in train_folds:
+                    for review in fold.reviews:
+                        train_reviews.append(review)
+                        train_users.append(review.userid)
+                        train_items.append(review.itemid)
+                train = Dataset(test.name, train_reviews, train_users, train_items)
+
+                # prime the model
+                svd = ItemsCatsSVD(params, train, self.item_categories)
                 svd_trained = sgd.train_model(svd, train)
                 rmse = sgd.test_model(svd_trained, test)
                 rmses.append(rmse)

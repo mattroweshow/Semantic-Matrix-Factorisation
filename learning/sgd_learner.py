@@ -9,8 +9,10 @@ class SGD:
 
     # trains the model using SGD
     def train_model(self, model, training):
+        print "Begin training"
         epoch_count = 1
         while epoch_count <= model.max_epochs:
+            print "Epoch completed"
             reviews = training.reviews
             # shuffle the order of the reviews
             shuffle(reviews)

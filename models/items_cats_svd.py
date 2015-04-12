@@ -3,6 +3,8 @@ import numpy as np
 
 class ItemsCatsSVD(baseSVD):
     def __init__(self, parameters, training, item_cats):
+        print "Initialising the model"
+
         # set the learning params
         self.max_epochs = parameters['max_epochs']
         self.epsilon = parameters['epsilon']
@@ -43,6 +45,11 @@ class ItemsCatsSVD(baseSVD):
             self.user_biases[userid] = 0
             self.user_latent_factors[userid] = np.zeros(self.f)
 
+        # prime the item biases
+        for itemid in training.items:
+            self.item_biases[itemid] = 0
+
+
         # prime the categories' latent factors
         self.unique_cats = []
         for item in item_cats:
@@ -68,9 +75,12 @@ class ItemsCatsSVD(baseSVD):
             # set the average category rating for each vector element
             avg_rating = 0
             if len(item_reviews) is not 0:
-                avg_rating = sum([review.rating_score for review in item_reviews]) / len(item_reviews)
+                avg_rating = sum([int(review.rating_score) for review in item_reviews]) / len(item_reviews)
             for cat in cats:
                 item_cat_avg_rating_vector[self.unique_cats.index(cat)] = avg_rating
+
+            # update the item to cats ratings
+            self.item_cats_ratings[item] = item_cat_avg_rating_vector
 
         self.epochs = 0
 
@@ -80,10 +90,11 @@ class ItemsCatsSVD(baseSVD):
 
         # returns the predicted rating of the review
     def apply(self, review):
+#        print "deriving rating"
         predicted_rating = self.mu
 
-        # if we have the user and item bias then use them
-        if review.itemid in self.item_biases and review.userid in self.user_biases:
+        # if we have the user and item bias and the item has been mapped to categories then use them
+        if review.itemid in self.item_biases and review.userid in self.user_biases and review.itemid in self.item_cats_ratings:
             item_bias = self.item_biases[review.itemid]
             user_bias = self.user_biases[review.userid]
 
@@ -91,13 +102,19 @@ class ItemsCatsSVD(baseSVD):
             item_categories_ratings = self.item_cats_ratings[review.itemid]
 
             # compute the dot product between the user latent factor vector and the categories by latent factors matrix
-            pc_1 = np.dot(user_latent_factors, self.cats_latent_factors_matrix)
+            pc_1 = np.dot(user_latent_factors, np.transpose(self.cats_latent_factors_matrix))
             pc_2 = np.dot(pc_1, item_categories_ratings)
 
             # determine the predicted rating
             predicted_rating += item_bias + user_bias + pc_2
+#            print predicted_rating
 
+        elif review.itemid in self.item_biases and review.userid in self.user_biases and review.itemid not in self.item_cats_ratings:
             # if we only have item bias then use that
+            item_bias = self.item_biases[review.itemid]
+            user_bias = self.user_biases[review.userid]
+            predicted_rating += item_bias + user_bias
+
         elif review.itemid in self.item_biases and review.userid not in self.user_biases:
             item_bias = self.item_biases[review.itemid]
 
@@ -116,7 +133,7 @@ class ItemsCatsSVD(baseSVD):
     def update(self, review, error):
         # print str(error)
 
-        if review.itemid in self.item_biases and review.userid in self.user_biases:
+        if review.itemid in self.item_biases and review.userid in self.user_biases and review.itemid in self.item_cats_ratings:
             # update the biases
             item_bias = self.item_biases[review.itemid]
             self.item_biases[review.itemid] = item_bias + self.eta * (error - self.lambd * item_bias)
@@ -131,14 +148,27 @@ class ItemsCatsSVD(baseSVD):
             old_cats_m = cats_m
 
             # update the user latent factors
-            user_latent_factors += self.eta * (error - self.lambd * old_user_latent_factors)
+            item_categories_ratings = self.item_cats_ratings[review.itemid]
+            user_latent_factors += self.eta * (error * np.dot(item_categories_ratings, cats_m)
+                                               - self.lambd * old_user_latent_factors)
+
             # update the categories' latent factors
             for cat in self.item_cats[review.itemid]:
-                cats_m[self.unique_cats.index(cat)] += self.eta * (error - self.lambd * old_cats_m[self.unique_cats.index(cat)])
+                cats_m[self.unique_cats.index(cat)] += self.eta * \
+                                                       (error * self.user_latent_factors[review.userid] * self.item_cats_ratings[review.itemid][self.unique_cats.index(cat)]
+                                                        - self.lambd * old_cats_m[self.unique_cats.index(cat)])
 
             # reset the latent factors
             self.user_latent_factors[review.userid] = user_latent_factors
             self.cats_latent_factors_matrix = cats_m
+
+        elif review.itemid in self.item_biases and review.userid in self.user_biases and review.itemid in self.item_cats_ratings:
+            # update the biases
+            item_bias = self.item_biases[review.itemid]
+            self.item_biases[review.itemid] = item_bias + self.eta * (error - self.lambd * item_bias)
+
+            user_bias = self.user_biases[review.userid]
+            self.user_biases[review.userid] = user_bias + self.eta * (error - self.lambd * user_bias)
 
         # log the error
         self.errors.append(error)
