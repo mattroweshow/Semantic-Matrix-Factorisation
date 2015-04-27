@@ -1,8 +1,11 @@
 from svd_base import baseSVD
 import numpy as np
+import os
+import math
+import sys
 
 class ItemsCatsSVD(baseSVD):
-    def __init__(self, parameters, training, item_cats):
+    def __init__(self, parameters, training, item_cats, verbose):
         print "Initialising the model"
 
         # set the learning params
@@ -20,6 +23,8 @@ class ItemsCatsSVD(baseSVD):
 
         # set the item categories
         self.item_cats = item_cats
+
+        self.verbose = verbose
 
         # prime the model logging components
         self.errors = []
@@ -57,6 +62,8 @@ class ItemsCatsSVD(baseSVD):
             for cat in cats:
                 if cat not in self.unique_cats:
                     self.unique_cats.append(cat)
+        if self.verbose:
+            print "Unique Cats = " + str(len(self.unique_cats))
 #        for cat in unique_cats:
 #            self.cats_latent_factors[cat] = np.zeros(self.f)
 
@@ -103,11 +110,28 @@ class ItemsCatsSVD(baseSVD):
 
             # compute the dot product between the user latent factor vector and the categories by latent factors matrix
             pc_1 = np.dot(user_latent_factors, np.transpose(self.cats_latent_factors_matrix))
-            pc_2 = np.dot(pc_1, item_categories_ratings)
+            pc_2 = np.dot(pc_1, np.transpose(item_categories_ratings))
+
+            # Print everything if verbose is called
+            if self.verbose:
+                print "User Latent Factors = " + str(user_latent_factors)
+                print str(user_latent_factors.shape)
+                print "Item Category Ratings = " + str(item_categories_ratings)
+                print str(item_categories_ratings.shape)
+                print "Cats latent factors matrix = " + str(self.cats_latent_factors_matrix)
+                print str(self.cats_latent_factors_matrix.shape)
+                print "PC1 = " + str(pc_1)
+                print str(pc_1.shape)
+                print "PC2 = " + str(pc_2)
+                print str(pc_2.shape)
+
 
             # determine the predicted rating
             predicted_rating += item_bias + user_bias + pc_2
-#            print predicted_rating
+            output = "\nPC_1 = " + str(pc_1)
+            output += "\nPC_2=" + str(pc_2)
+            output += "\nPredicted rating = " + str(predicted_rating)
+            self.log_output(output)
 
         elif review.itemid in self.item_biases and review.userid in self.user_biases and review.itemid not in self.item_cats_ratings:
             # if we only have item bias then use that
@@ -127,6 +151,12 @@ class ItemsCatsSVD(baseSVD):
 
             # determine the predicted rating
             predicted_rating += user_bias
+
+        if math.isnan(predicted_rating):
+            # print self.item_biases
+            # print self.user_latent_factors[review.userid]
+            # print self.cats_latent_factors_matrix
+            sys.exit()
 
         return predicted_rating
 
@@ -155,7 +185,8 @@ class ItemsCatsSVD(baseSVD):
             # update the categories' latent factors
             for cat in self.item_cats[review.itemid]:
                 cats_m[self.unique_cats.index(cat)] += self.eta * \
-                                                       (error * self.user_latent_factors[review.userid] * self.item_cats_ratings[review.itemid][self.unique_cats.index(cat)]
+                                                       (error * self.user_latent_factors[review.userid]
+                                                        * self.item_cats_ratings[review.itemid][self.unique_cats.index(cat)]
                                                         - self.lambd * old_cats_m[self.unique_cats.index(cat)])
 
             # reset the latent factors
@@ -175,12 +206,10 @@ class ItemsCatsSVD(baseSVD):
 
 
     def write_diagnostics(self):
-        # f = open('myfile', 'w')
-        # for error in self.errors:
-        #     f.write(str(error) + '\n')
-        # f.close()
-        # print str(self.errors)
-        pass
+        print "Item Biases = " + str(self.item_biases)
+        print "User Biases = " + str(self.user_biases)
+        print "User LF Matrix = " + str(self.user_latent_factors)
+        print "Cats LF Matrix = " + str(self.cats_latent_factors_matrix)
 
 
     def derive_average_rating(self):
@@ -228,3 +257,9 @@ class ItemsCatsSVD(baseSVD):
                     break
 
         return converged
+
+    def log_output(self, output):
+        working_dir = os.path.dirname(os.path.realpath(__file__))
+        log_file_path = working_dir + "/../data/log/log_file_item_cats_svd.log"
+        with open(log_file_path, "a") as myfile:
+            myfile.write(output)

@@ -21,7 +21,7 @@ for dataset in datasets:
 
     # Load the mappings file
     item_categories = loader.load_item_category_mappings(path_to_mappings_dir)
-    print "Categories=" + str(len(item_categories))
+    print "Items with categories = " + str(len(item_categories))
 
     # Split the dataset: 90:10
     splitter = datasetsplitter()
@@ -30,6 +30,9 @@ for dataset in datasets:
     # Split the dataset into 10 for 10-fold cross validation
     folds = splitter.prepare_folds(splits.train, 10)
 
+    # Set the verbose output to print everything
+    verbose = False
+
     # Tune each model
 #    model_ids = [1, 2, 3]
     model_ids = [3]
@@ -37,5 +40,5 @@ for dataset in datasets:
         # Run the model tuner - best hyperparameters are pushed to the logs directory for the model
         tuner = Tuner()
         params = {"f": 10, "max_epochs": 5, "epsilon": 0.00001}
-        hypers = [{"eta": 0.1, "lambda": 0.1}, {"eta": 0.01, "lambda": 0.01}]
-        tuner.nfold_cv_hyperparameter_tuner(model_id, params, hypers, folds, item_categories)
+        hypers = [{"eta": 0.01, "lambda": 0.01}]
+        tuner.nfold_cv_hyperparameter_tuner(model_id, params, hypers, folds, item_categories, verbose)

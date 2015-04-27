@@ -29,16 +29,18 @@ class SGD:
 
             # break if the model has converged
             if model.convergence_check():
+                print "converged"
                 break
 
-        # write the model's diagnostics
-        model.write_diagnostics()
+            # write the model's diagnostics
+            # model.write_diagnostics()
 
         # return the learnt model
         return model
 
     # evaluates the model on the held-out test portion
     def test_model(self, model, test):
+        print "Testing the model"
         actual_ratings = []
         predicted_ratings = []
 
@@ -48,5 +50,10 @@ class SGD:
             predicted_ratings.append(float(predicted_rating))
             actual_ratings.append(float(review.rating_score))
 
+        print "Determining the RMSE"
+        # print actual_ratings
+        # print predicted_ratings
+
         rms = sqrt(mean_squared_error(actual_ratings, predicted_ratings))
+        print str(rms)
         return rms
